@@ -1,0 +1,34 @@
+# THREADING RULE, CAMPAIGN-WIDE: jobs x blas_threads = 32, the core count, for
+# whatever runs concurrently. Every arm therefore gets the SAME machine budget
+# and how it spends it is the method's own business -- :rbf puts it all in one
+# dense LU, :gp and :idw spread it over eight workers.
+#
+# CONSEQUENCE TO DISCLOSE: per-arm STAGE wall-clock is comparable (identical
+# hardware, identical budget); per-cell fit_time_s is NOT, because a cell here
+# runs on 1 thread(s) while a cell in another arm may run on 32. Accuracy,
+# coverage and width are unaffected by threading.
+#
+# Six diona shards; THREE run concurrently, so the product is per wave:
+# 10 jobs x 1 thread x 3 shards = 30.
+#
+# Diona shard: ishigami-sobol. Shares one out dir with every other shard in this
+# directory; the (cell, arm) sets are disjoint, which is what makes
+# concurrent sharding safe against the fragment key.
+name: diona-ishigami-sobol-5k
+arms: [diona]
+cells:
+  functions: [ishigami]
+  tiers: [500D, 1000D, 2000D]
+run:
+  out: results/data-6arm-5000D-20260923
+  jobs: 10
+  timeout_s: 43200
+  blas_threads: 1
+  resume: true
+  # BATCH 2: 5000 x dim held-out query points per function (batch 1 used 1000).
+  # n_query and X_query both enter the fixture digest, so this rotates every
+  # fixture_sha256 and every fragment key -- batch 1 cannot be resumed from.
+  query_multiplier: 5000
+solver:
+  L_H: estimate
+  L_H_factor: 2.5

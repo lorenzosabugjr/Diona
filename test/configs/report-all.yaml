@@ -1,0 +1,40 @@
+# Reporting/audit pass over the shared out dir. Used with --report: it fits
+# nothing, starts no worker and writes no fixture -- it only re-reads the
+# terminal fragments the shards already wrote and rebuilds the canonical
+# comparative and per-problem artifacts across all six arms.
+#
+# This config is also the CLAIM the campaign is measured against: it names
+# 6 arms x 36 cells = 216 pairs, with NO exclusions: applicable_arms drops
+# nothing, because :rbf fits the two Ishigami 50^3 cells at Float32 (87.9 GiB)
+# where Float64 would need 176.1 GiB. test/tests_benchmark_data_config.jl asserts
+# that the other configs in this directory cover exactly those 216 -- no gap,
+# no overlap. --report hard-errors naming any pair it claims and cannot read.
+#
+# RUNBOOK (fixtures first, then shards in parallel, then this):
+#   julia --project=test/ml test/benchmark_data.jl --prepare-fixtures test/configs/report-all.yaml
+#   # launch diona-*.yaml, gp-all.yaml, nn-all.yaml, nsm-all.yaml,
+#   # surrogates-rbf-idw.yaml concurrently, all into the same run.out
+#   julia --project=test/ml test/benchmark_data.jl --report test/configs/report-all.yaml
+#
+# The --prepare-fixtures step is not optional when shards start concurrently
+# into a COLD out dir: fixture_sha256 folds in a wall-clock timestamp, so two
+# processes that both find a fixture missing key their fragments to different
+# stems. See prepare_fixtures_from_config in test/benchmark_data.jl.
+name: report-all-5k
+arms: [diona, nn, gp, nsm, rbf, idw]
+cells:
+  all: true
+run:
+  out: results/data-6arm-5000D-20260923
+  jobs: 1
+  timeout_s: 43200
+  blas_threads: 1
+  resume: true
+  # BATCH 2: 5000 x dim held-out query points per function (batch 1 used 1000).
+  # n_query and X_query both enter the fixture digest, so this rotates every
+  # fixture_sha256 and every fragment key -- batch 1 cannot be resumed from.
+  query_multiplier: 5000
+  # MUST match the device the :nn shard ran with. run.device is part of the :nn
+  # settings hash, so a report resolving cpu cannot find CUDA-fitted :nn
+  # fragments and hard-errors naming all 36 of them. See nn-all.yaml.
+  device: cuda

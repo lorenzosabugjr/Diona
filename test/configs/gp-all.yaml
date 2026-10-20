@@ -1,0 +1,34 @@
+# THREADING RULE, CAMPAIGN-WIDE: jobs x blas_threads = 32, the core count, for
+# whatever runs concurrently. Every arm therefore gets the SAME machine budget
+# and how it spends it is the method's own business -- :rbf puts it all in one
+# dense LU, :gp and :idw spread it over eight workers.
+#
+# CONSEQUENCE TO DISCLOSE: per-arm STAGE wall-clock is comparable (identical
+# hardware, identical budget); per-cell fit_time_s is NOT, because a cell here
+# runs on 4 thread(s) while a cell in another arm may run on 32. Accuracy,
+# coverage and width are unaffected by threading.
+#
+# GP shard: all 36 cells. :gp runs in-process under test/ml (no separate
+# environment), so it does not contend with the nn_env or baseline_env arms.
+#
+# This is a FULL arm, not a spot check. report-all.yaml claims all six arms on
+# all 36 cells, and test/tests_benchmark_data_config.jl asserts that the shards
+# in this directory cover exactly that claim -- a three-cell :gp shard would
+# leave 33 arm-cells claimed and never scheduled, and the --report pass
+# hard-errors naming every one of them.
+#
+# Interval kind: variational / approximate. Not a guarantee.
+name: gp-all-5k
+arms: [gp]
+cells:
+  all: true
+run:
+  out: results/data-6arm-5000D-20260923
+  jobs: 8
+  timeout_s: 43200
+  blas_threads: 4
+  resume: true
+  # BATCH 2: 5000 x dim held-out query points per function (batch 1 used 1000).
+  # n_query and X_query both enter the fixture digest, so this rotates every
+  # fixture_sha256 and every fragment key -- batch 1 cannot be resumed from.
+  query_multiplier: 5000

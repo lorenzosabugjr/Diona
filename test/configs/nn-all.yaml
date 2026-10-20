@@ -1,0 +1,43 @@
+# THREADING RULE, CAMPAIGN-WIDE: jobs x blas_threads = 32, the core count, for
+# whatever runs concurrently. Every arm therefore gets the SAME machine budget
+# and how it spends it is the method's own business -- :rbf puts it all in one
+# dense LU, :gp and :idw spread it over eight workers.
+#
+# CONSEQUENCE TO DISCLOSE: per-arm STAGE wall-clock is comparable (identical
+# hardware, identical budget); per-cell fit_time_s is NOT, because a cell here
+# runs on 32 thread(s) while a cell in another arm may run on 32. Accuracy,
+# coverage and width are unaffected by threading.
+#
+# NN shard: all 36 cells. :nn subprocesses to --project=test/ml/nn_env (Lux),
+# so it is its own shard rather than sharing one with :gp.
+#
+# This is a FULL arm, not a spot check -- see the note in gp-all.yaml.
+#
+# Interval kind: none. The MLP produces no interval at all; that is an absence,
+# not a failure.
+#
+# DEVICE = cuda, and jobs = 1 BECAUSE OF VRAM, not compute. Polled at 10 Hz
+# through a full cell-29 fit: compute peaks at 59% and averages 21.8% -- a
+# width-64 MLP cannot saturate 7,680 cores and does not need to -- but VRAM
+# peaks at 22,855 of 24,564 MiB (93%), because CUDA.jl's pool grows to fill the
+# card. A second concurrent worker would not fit. Do not raise jobs.
+#
+# The device is part of the :nn settings hash, so CPU and CUDA fragments land on
+# different paths and can never be resumed from or compared against each other.
+# Measured Float32/CUDA vs the former Float64/CPU: 2.1x on the small cells,
+# 47x on rosenbrock 2000D. The stage is ~35 min; on cpu it is ~8 h.
+name: nn-all-5k
+arms: [nn]
+cells:
+  all: true
+run:
+  out: results/data-6arm-5000D-20260923
+  jobs: 1
+  timeout_s: 43200
+  blas_threads: 32
+  resume: true
+  # BATCH 2: 5000 x dim held-out query points per function (batch 1 used 1000).
+  # n_query and X_query both enter the fixture digest, so this rotates every
+  # fixture_sha256 and every fragment key -- batch 1 cannot be resumed from.
+  query_multiplier: 5000
+  device: cuda

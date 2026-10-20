@@ -1,0 +1,39 @@
+# RBF shard: all 36 cells, from test/ml/baselines/baseline_env.
+#
+# SPLIT FROM idw because blas_threads is one scalar per shard and the two arms
+# need opposite settings.
+#
+# THREADING RULE, CAMPAIGN-WIDE: jobs x blas_threads = 32, the core count, for
+# whatever runs concurrently. Every arm therefore gets the SAME machine budget
+# and how it spends it is the method's own business -- :rbf puts it all in one
+# dense LU, :gp and :idw spread it over eight workers.
+#
+# CONSEQUENCE TO DISCLOSE: per-arm STAGE wall-clock is comparable (identical
+# hardware, identical budget); per-cell fit_time_s is NOT, because a cell here
+# runs on 32 thread(s) while a cell in another arm may run on 32. Accuracy,
+# coverage and width are unaffected by threading.
+#
+# jobs 1 is forced by MEMORY: each 125k cell peaks at ~88 GiB (measured 87.8)
+# against a 157 GiB machine, so a second worker will not fit. That leaves the
+# full 32 threads for the dense 125,000 x 125,000 LU -- 1.3e15 flops, ~17 h at
+# one thread, ~32 min with the machine.
+#
+# Memory, not compute, is why jobs stays 1: each 125k cell peaks at ~88 GiB
+# (measured 87.8) against a 157 GiB machine.
+#
+# :rbf runs at FLOAT32 on every cell -- one configuration, no per-cell split.
+# Interval kind: none.
+name: rbf-all-5k
+arms: [rbf]
+cells:
+  all: true
+run:
+  out: results/data-6arm-5000D-20260923
+  jobs: 1
+  timeout_s: 43200
+  blas_threads: 32
+  resume: true
+  # BATCH 2: 5000 x dim held-out query points per function (batch 1 used 1000).
+  # n_query and X_query both enter the fixture digest, so this rotates every
+  # fixture_sha256 and every fragment key -- batch 1 cannot be resumed from.
+  query_multiplier: 5000

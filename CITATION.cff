@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use Diona, please cite the manuscript below."
+title: "Diona: Direct Inference on Admissible Sets"
+type: software
+authors:
+  - family-names: "Sabug"
+    given-names: "Lorenzo"
+    name-suffix: "Jr."
+    affiliation: "Imperial College London"
+  - family-names: "Kerrigan"
+    given-names: "Eric"
+    affiliation: "Imperial College London"
+repository-code: "https://github.com/lorenzosabugjr/Diona"
+license: MIT
+version: 0.1.0
+preferred-citation:
+  type: article
+  title: "Direct Inference on Admissible Sets (Diona)"
+  authors:
+    - family-names: "Sabug"
+      given-names: "Lorenzo"
+      name-suffix: "Jr."
+    - family-names: "Kerrigan"
+      given-names: "Eric"
+  year: 2026
+  notes: "Manuscript under review."
